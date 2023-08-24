@@ -43,8 +43,7 @@ app.post('/api/users',async(req,res)=>{
     if(foundUser){
       return res.json(foundUser);
     }
-    const user = User.create({username:userName})
-    await user.save();
+    const user = await User.create({username:userName})
     console.log(user);
     return res.json(user);
   }catch(err){
