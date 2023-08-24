@@ -35,6 +35,8 @@ app.get('/', (req, res) => {
 })
 
 app.post('/api/users',async(req,res)=>{
+  try{
+
     const userName = req.body.username;
     const foundUser = await User.findOne({username:userName})
     
@@ -45,15 +47,24 @@ app.post('/api/users',async(req,res)=>{
     await user.save();
     console.log(user);
     return res.json(user);
+  }catch(err){
+    console.log(err);
+  }
 })
 
 app.get('/api/users',async (req,res)=>{
+  try{
     let user = await User.find();
     console.log(user)
     res.send(user);
+  }catch(err){
+    console.log(err);
+  }
 })
 
 app.post('/api/users/:_id/exercises',async (req,res)=>{
+  try{
+
     const id = req.params._id;
     const {description,duration,date} = req.body;
 
@@ -81,46 +92,53 @@ app.post('/api/users/:_id/exercises',async (req,res)=>{
         console.log(err)
         res.send("There was an error");
     }
+  }catch(err){
+    console.log(err);
+  }
 })
 
 app.get('/api/users/:_id/logs',async (req,res)=>{
-  let {from,to,limit} = req.query;
-  if(!limit){
-    limit = 100
+  try{
+    let {from,to,limit} = req.query;
+    if(!limit){
+      limit = 100
+    }
+    const id = req.params._id;
+    const user = await User.findById(id)
+    let filter = {user_id:id};
+    if(!user){
+      res.send("Could not find the user")
+      return;
+    }
+    let dateObj = {}
+  
+    if(from){
+      dateObj["$gte"]= new Date(from);
+    }
+    if(to){
+      dateObj["$lte"]= new Date(to);
+    }
+    if(from || to){
+      filter.date = dateObj;
+    }
+  
+    const exercises = await Exercise.find(filter).limit(+limit)
+    const log = exercises.map(e=>({
+      description:e.description,
+      duration:e.duration,
+      date:e.date.toDateString()
+    }))
+    console.log(exercises)
+    const count = exercises.length
+    res.json({
+      username:user.username,
+      count:count,
+      _id:id,
+      log:log
+    })
+  }catch(err){
+    console.log(err);
   }
-  const id = req.params._id;
-  const user = await User.findById(id)
-  let filter = {user_id:id};
-  if(!user){
-    res.send("Could not find the user")
-    return;
-  }
-  let dateObj = {}
-
-  if(from){
-    dateObj["$gte"]= new Date(from);
-  }
-  if(to){
-    dateObj["$lte"]= new Date(to);
-  }
-  if(from || to){
-    filter.date = dateObj;
-  }
-
-  const exercises = await Exercise.find(filter).limit(+limit)
-  const log = exercises.map(e=>({
-    description:e.description,
-    duration:e.duration,
-    date:e.date.toDateString()
-  }))
-  console.log(exercises)
-  const count = exercises.length
-  res.json({
-    username:user.username,
-    count:count,
-    _id:id,
-    log:log
-  })
 })
 const listener = app.listen(process.env.PORT || 4000, () =>{
   console.log('Your app is listening on port ' + listener.address().port)
